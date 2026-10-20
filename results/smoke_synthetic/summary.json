@@ -1,0 +1,44 @@
+{
+  "adaptive_minus_best_fixed (mean, lo95, hi95)": {
+    "AP": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "R@1": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Sem@10": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Col@10": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Joint@10": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "tau_dE00": 14.430130004882812,
+  "lam_star": 0.4,
+  "adaptive_star": [
+    0.4,
+    0.0,
+    20
+  ],
+  "n_test_queries": 126,
+  "n_test_gallery": 315,
+  "n_val_queries": 42,
+  "n_val_gallery": 105,
+  "colour_descriptor": "hsv",
+  "encoder": "hog_standin",
+  "dataset": "synthetic_smoketest",
+  "seed": 42
+}

@@ -1,0 +1,13 @@
+numpy
+pandas
+scikit-learn
+scikit-image
+opencv-python-headless
+matplotlib
+pyyaml
+tqdm
+# For real runs (Colab/Kaggle):
+torch
+torchvision
+transformers
+faiss-cpu
