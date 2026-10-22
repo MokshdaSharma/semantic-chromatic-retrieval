@@ -1,0 +1,34 @@
+\begin{table}[t]\centering\small
+\caption{Adaptive minus fixed-weight fusion (paired over test queries; last column = seeds whose 95\% bootstrap CI excludes 0). Seven metrics, no multiplicity correction.}\label{tab:paired}
+\resizebox{\linewidth}{!}{\begin{tabular}{llrrr}\toprule
+encoder & comparison & metric & mean\_diff & seeds\_CI\_excl\_0 \\ \midrule
+openai\_clip-vit-base-patch32 & adaptive\_minus\_best\_fixed & AP & +0.0014 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_best\_fixed & R@1 & +0.0056 & 0/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_best\_fixed & Sem@10 & -0.0028 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_best\_fixed & Col@10 & +0.0035 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_best\_fixed & Joint@10 & +0.0006 & 0/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_best\_fixed & ColLab@10 & +0.0066 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_best\_fixed & JointLab@10 & +0.0045 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_fixed\_lambda0.5 & AP & +0.0161 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_fixed\_lambda0.5 & R@1 & -0.0113 & 0/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_fixed\_lambda0.5 & Sem@10 & +0.0366 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_fixed\_lambda0.5 & Col@10 & -0.0213 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_fixed\_lambda0.5 & Joint@10 & +0.0172 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_fixed\_lambda0.5 & ColLab@10 & -0.0280 & 1/1 \\
+openai\_clip-vit-base-patch32 & adaptive\_minus\_fixed\_lambda0.5 & JointLab@10 & -0.0021 & 0/1 \\
+facebook\_dinov2-base & adaptive\_minus\_best\_fixed & AP & -0.0018 & 0/1 \\
+facebook\_dinov2-base & adaptive\_minus\_best\_fixed & R@1 & +0.0042 & 0/1 \\
+facebook\_dinov2-base & adaptive\_minus\_best\_fixed & Sem@10 & -0.0035 & 1/1 \\
+facebook\_dinov2-base & adaptive\_minus\_best\_fixed & Col@10 & +0.0023 & 0/1 \\
+facebook\_dinov2-base & adaptive\_minus\_best\_fixed & Joint@10 & -0.0016 & 0/1 \\
+facebook\_dinov2-base & adaptive\_minus\_best\_fixed & ColLab@10 & +0.0105 & 1/1 \\
+facebook\_dinov2-base & adaptive\_minus\_best\_fixed & JointLab@10 & +0.0059 & 1/1 \\
+facebook\_dinov2-base & adaptive\_minus\_fixed\_lambda0.5 & AP & +0.0002 & 0/1 \\
+facebook\_dinov2-base & adaptive\_minus\_fixed\_lambda0.5 & R@1 & -0.0014 & 0/1 \\
+facebook\_dinov2-base & adaptive\_minus\_fixed\_lambda0.5 & Sem@10 & +0.0099 & 1/1 \\
+facebook\_dinov2-base & adaptive\_minus\_fixed\_lambda0.5 & Col@10 & -0.0069 & 1/1 \\
+facebook\_dinov2-base & adaptive\_minus\_fixed\_lambda0.5 & Joint@10 & +0.0035 & 0/1 \\
+facebook\_dinov2-base & adaptive\_minus\_fixed\_lambda0.5 & ColLab@10 & -0.0131 & 1/1 \\
+facebook\_dinov2-base & adaptive\_minus\_fixed\_lambda0.5 & JointLab@10 & -0.0051 & 1/1 \\
+\bottomrule\end{tabular}}
+\end{table}

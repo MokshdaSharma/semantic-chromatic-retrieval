@@ -55,3 +55,31 @@ Proceed with the adaptive method as the contribution only if (a) the novelty che
 1. `notebooks/run_colab.ipynb` on Colab GPU: `--encoder clip` then `--encoder dinov2`, DeepFashion In-Shop (needs the dataset password from the authors' page).
 2. Share the `results/<run>/` folder (or push) → I analyse, build tables/figures, and draft the manuscript sections.
 3. Do the literature table (§5 of your plan); tell me the closest competing method so I can implement it as a baseline.
+
+---
+# Empirical-study plan (v2) — adopted after the first real results
+Chosen route: **empirical study**, not a new-method paper. Working title: *Does Query-Adaptive Weighting Help? An Empirical Study of Semantic–Chromatic Fusion for Colour-Sensitive Product Image Retrieval.*
+
+## Hypotheses (declared before v2 runs; H1–H3 were informed by the v1 single-seed run, H4–H5 are untested)
+* **H1** Fusing frozen semantic and colour descriptors beats either alone on Joint/P@10 and human-label colour match (v1: supported).
+* **H2** Training-free query-adaptive dispersion weighting is *practically equivalent* to validation-tuned fixed weighting: |Δ| < 0.01 on mAP and P@10(=Joint_label@10), across seeds and both encoders (v1: consistent).
+* **H3** Pixel colour similarity (histogram Bhattacharyya, CIEDE2000 of median foreground colour) is a weak/uneven proxy for human colour labels → measured by ROC-AUC (`metric_agreement.csv`).
+* **H4** (new) Colour fusion helps more for chromatic query colours than for achromatic ones (Black/White/Grey/Silver/Off White/Charcoal/Grey Melange/Cream; grouping fixed before analysis).
+* **H5** (new) Under nuisance transforms the fused ranking follows the semantic encoder more than the colour descriptor.
+
+## Primary outcomes and decision rules
+Primary: mAP and P@10 (≡ Joint_label@10). Secondary: R@1, Sem@10, ColLab@10, pixel Col@10 (τ-sensitivity reported). 5 seeds × 2 encoders; report mean±SD, bootstrap CIs per run, and the number of seeds whose paired CI excludes 0. No multiplicity correction is applied — interpret isolated "significant" metrics with caution.
+
+## Protocol log (changes made AFTER seeing v1 test results — disclosed in the paper)
+1. Pixel-colour threshold τ (90th pct, 29.7 ΔE00) found too permissive → human-label colour metrics made primary; τ sensitivity (25/50/75/90th pct) added.
+2. Second λ-selection objective (validation P@10/Joint) added alongside mAP, because mAP favours semantics.
+3. Blur severities rescaled (σ 0.5–2.0) — v1's σ up to 5 destroyed ~60×80 px images.
+4. More data (`--n 30000`), multiple seeds (different random splits), per-query dumps, metric-agreement and per-colour analyses added.
+5. Run files from v1 are kept in `results/v1_fashion_small` for transparency; **v2 numbers supersede them** and v1 is never mixed into v2 tables.
+
+## Remaining work (not done)
+* Run v2 on Colab (`notebooks/run_colab_v2_multiseed.ipynb`) → `results/v2`, `results/v2_tables`.
+* Literature table + novelty statement (`paper/LITERATURE_TABLE.md`); reproduce the colour-aware re-ranking baseline if reproducible.
+* External validation dataset (e.g. Stanford Online Products — colour labels absent there, so only semantic/cost claims transfer) — optional.
+* Fill manuscript placeholders from v2 tables; qualitative figure from `per_query.csv`; failure analysis.
+* Dataset licence check; confirm DINOv2/CLIP licences before redistributing anything.

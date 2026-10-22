@@ -1,0 +1,18 @@
+\begin{table}[t]\centering\small
+\caption{Main comparison on the test split (mean$\pm$SD over seeds where more than one run exists).}\label{tab:main}
+\resizebox{\linewidth}{!}{\begin{tabular}{llrrrrrrr}\toprule
+encoder & method & mAP & R@1 & P@10 & Sem@10 & ColLab@10 & JointLab@10 & Col@10 \\ \midrule
+openai\_clip-vit-base-patch32 & Colour only (HSV) & 0.113 & 0.394 & 0.280 & 0.413 & 0.618 & 0.280 & 0.979 \\
+openai\_clip-vit-base-patch32 & Semantic only & 0.291 & 0.552 & 0.447 & 0.850 & 0.530 & 0.447 & 0.889 \\
+openai\_clip-vit-base-patch32 & Fixed, $\lambda$=0.5 & 0.305 & 0.638 & 0.520 & 0.801 & 0.640 & 0.520 & 0.965 \\
+openai\_clip-vit-base-patch32 & Fixed, val-best (mAP) & 0.320 & 0.622 & 0.514 & 0.841 & 0.605 & 0.514 & 0.940 \\
+openai\_clip-vit-base-patch32 & Adaptive, val-best (mAP) & 0.321 & 0.627 & 0.518 & 0.838 & 0.612 & 0.518 & 0.944 \\
+openai\_clip-vit-base-patch32 & Fixed, val-best (mAP), Lab hist. & 0.321 & 0.598 & 0.508 & 0.844 & 0.598 & 0.508 & 0.950 \\
+facebook\_dinov2-base & Colour only (HSV) & 0.113 & 0.394 & 0.280 & 0.413 & 0.618 & 0.280 & 0.979 \\
+facebook\_dinov2-base & Semantic only & 0.258 & 0.405 & 0.361 & 0.873 & 0.423 & 0.361 & 0.846 \\
+facebook\_dinov2-base & Fixed, $\lambda$=0.5 & 0.318 & 0.619 & 0.523 & 0.838 & 0.624 & 0.523 & 0.961 \\
+facebook\_dinov2-base & Fixed, val-best (mAP) & 0.320 & 0.613 & 0.512 & 0.851 & 0.600 & 0.512 & 0.951 \\
+facebook\_dinov2-base & Adaptive, val-best (mAP) & 0.319 & 0.617 & 0.518 & 0.848 & 0.611 & 0.518 & 0.954 \\
+facebook\_dinov2-base & Fixed, val-best (mAP), Lab hist. & 0.320 & 0.568 & 0.496 & 0.858 & 0.579 & 0.496 & 0.968 \\
+\bottomrule\end{tabular}}
+\end{table}

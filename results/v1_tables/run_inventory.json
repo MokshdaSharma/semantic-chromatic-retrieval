@@ -1,0 +1,28 @@
+{
+ "openai_clip-vit-base-patch32": {
+  "n_runs": 1,
+  "seeds": [
+   42
+  ],
+  "dataset": "fashion_small",
+  "n_test_queries": [
+   708
+  ],
+  "n_test_gallery": [
+   6774
+  ]
+ },
+ "facebook_dinov2-base": {
+  "n_runs": 1,
+  "seeds": [
+   42
+  ],
+  "dataset": "fashion_small",
+  "n_test_queries": [
+   708
+  ],
+  "n_test_gallery": [
+   6774
+  ]
+ }
+}

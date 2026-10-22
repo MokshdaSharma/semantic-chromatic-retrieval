@@ -5,7 +5,7 @@ LEVELS = {
  "contrast":   [0.5, 0.75, 1.25, 1.5],
  "saturation": [0.4, 0.7, 1.3, 1.6],
  "hue_shift":  [10, 20, 40, 60],     # degrees (a *meaningful* colour change, see PLAN.md)
- "blur":       [1.0, 2.0, 3.0, 5.0], # gaussian sigma
+ "blur":       [0.5, 1.0, 1.5, 2.0], # gaussian sigma (px); v1 used up to 5.0, which destroys ~60x80 px images
  "occlusion":  [0.1, 0.2, 0.3, 0.4], # fraction of area, random grey rectangle
 }
 def apply(img, kind, level, rng):

@@ -1,0 +1,3 @@
+encoder,sem_scoring_ms_per_query,colour_scoring_ms_per_query,fixed_fusion_ms_per_query,adaptive_fusion_ms_per_query,semantic_fp32,hsv_fp32,lab_fp32
+facebook_dinov2-base,0.1061,0.0344,0.0106,0.0498,3072.0,1024.0,1024.0
+openai_clip-vit-base-patch32,0.0757,0.0368,0.0109,0.0511,2048.0,1024.0,1024.0

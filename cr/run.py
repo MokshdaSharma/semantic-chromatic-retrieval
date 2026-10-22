@@ -28,8 +28,8 @@ def main():
     ap.add_argument("--dataset", default="synthetic"); ap.add_argument("--root")
     ap.add_argument("--encoder", default="hog"); ap.add_argument("--hf_model")
     ap.add_argument("--out", required=True); ap.add_argument("--config", default="configs/experiment.yaml")
-    ap.add_argument("--max_test_queries", type=int, default=None)
-    a = ap.parse_args(); cfg = yaml.safe_load(open(a.config)); seed = cfg["seed"]
+    ap.add_argument("--max_test_queries", type=int, default=None); ap.add_argument("--seed", type=int, default=None)
+    a = ap.parse_args(); cfg = yaml.safe_load(open(a.config)); seed = a.seed if a.seed is not None else cfg["seed"]
     os.makedirs(a.out, exist_ok=True); cache = os.path.join(a.out, "cache"); os.makedirs(cache, exist_ok=True)
     rng = np.random.default_rng(seed)
 
@@ -46,7 +46,7 @@ def main():
         vq, vg = vsel[isq], vsel[~isq]
     if a.max_test_queries and len(tq) > a.max_test_queries: tq = rng.choice(tq, a.max_test_queries, replace=False)
     enc = F.HOGStandIn() if a.encoder == "hog" else F.HFEncoder(a.encoder, a.hf_model)
-    kinds = ["hsv", "lab"]; tagp = f"{ds.name}_{enc.name}"
+    kinds = ["hsv", "lab"]; tagp = f"{ds.name}_{enc.name}_s{seed}"
     fv_q = feats(ds, vq, enc, kinds, cache, tagp + "_vq"); fv_g = feats(ds, vg, enc, kinds, cache, tagp + "_vg")
     ft_q = feats(ds, tq, enc, kinds, cache, tagp + "_tq"); ft_g = feats(ds, tg, enc, kinds, cache, tagp + "_tg")
 
@@ -70,15 +70,19 @@ def main():
                           q_cl=None if ds.clabels is None else ds.clabels[qi], g_cl=None if ds.clabels is None else ds.clabels[gi])
 
     # ---- hyper-parameter selection on VALIDATION only -----------------
-    sel = cfg["selection_metric"]; score = lambda r: float(r[sel].mean())
-    def v(method, kind=cdesc): return score(make_eval(fv_q, fv_g, vq, vg, method, kind))
+    # Two PRE-DECLARED selection objectives (validation only). Primary = identity/class mAP (protocol v1);
+    # secondary = joint category+human-colour precision@10 (protocol v2, added after a first exploratory run).
+    sels = ["AP", "JointLab@10" if ds.clabels is not None else "Joint@10"]
+    def v(method, kind=cdesc):
+        r = make_eval(fv_q, fv_g, vq, vg, method, kind); return {k: float(r[k].mean()) for k in sels}
     grid_f = {l: v({"type": "fixed", "lam": l}) for l in cfg["lambda_grid"]}
-    lam_star = max(grid_f, key=grid_f.get)
     grid_a = {k: v({"type": "adaptive", "lam0": k[0], "gamma": k[1], "pool": k[2]})
               for k in itertools.product(cfg["lam0_grid"], cfg["gamma_grid"], cfg["pool_grid"])}
-    a_star = max(grid_a, key=grid_a.get)
-    pd.DataFrame([{"lam": l, sel: s} for l, s in grid_f.items()]).to_csv(f"{a.out}/val_fixed_grid.csv", index=False)
-    pd.DataFrame([{"lam0": k[0], "gamma": k[1], "pool": k[2], sel: s} for k, s in grid_a.items()]).to_csv(f"{a.out}/val_adaptive_grid.csv", index=False)
+    best = lambda g, k_: max(g, key=lambda x: g[x][k_])
+    lam_star, a_star = best(grid_f, sels[0]), best(grid_a, sels[0])
+    lamJ, aJ = best(grid_f, sels[1]), best(grid_a, sels[1])
+    pd.DataFrame([{"lam": l, **g} for l, g in grid_f.items()]).to_csv(f"{a.out}/val_fixed_grid.csv", index=False)
+    pd.DataFrame([{"lam0": k[0], "gamma": k[1], "pool": k[2], **g} for k, g in grid_a.items()]).to_csv(f"{a.out}/val_adaptive_grid.csv", index=False)
 
     # ---- TEST ----------------------------------------------------------
     methods = {
@@ -86,6 +90,8 @@ def main():
         "fixed_lambda0.5": {"type": "fixed", "lam": 0.5},
         f"fixed_best(lam={lam_star})": {"type": "fixed", "lam": lam_star},
         f"adaptive(lam0={a_star[0]},g={a_star[1]},N={a_star[2]})": {"type": "adaptive", "lam0": a_star[0], "gamma": a_star[1], "pool": a_star[2]},
+        f"fixed_bestJ(lam={lamJ})": {"type": "fixed", "lam": lamJ},
+        f"adaptiveJ(lam0={aJ[0]},g={aJ[1]},N={aJ[2]})": {"type": "adaptive", "lam0": aJ[0], "gamma": aJ[1], "pool": aJ[2]},
     }
     per_q, rows = {}, []
     for n, m in methods.items():
@@ -103,6 +109,30 @@ def main():
             mu, lo, hi = M.boot_ci(r[k], seed=seed); row[k if k != "AP" else "mAP"] = f"{mu:.4f} [{lo:.4f},{hi:.4f}]"
         rows.append(row)
     main_df = pd.DataFrame(rows); main_df.to_csv(f"{a.out}/metrics_main.csv", index=False)
+    pq = []
+    for n, r in per_q.items():
+        d_ = {"method": n, "qi": tq, "cat": ds.cats[tq], "colour_label": ds.clabels[tq] if ds.clabels is not None else ""}
+        d_.update({k: r[k] for k in keys(r)}); pq.append(pd.DataFrame(d_))
+    pd.concat(pq).to_csv(f"{a.out}/per_query.csv", index=False)
+
+    # Metric validity: how well does each score predict agreement of the HUMAN colour label (or identity if none)?
+    from sklearn.metrics import roc_auc_score
+    rs = np.random.default_rng(seed); npairs = 300000
+    qi_, gi_ = rs.integers(0, len(tq), npairs), rs.integers(0, len(tg), npairs)
+    lab_q, lab_g = (ds.clabels, ds.clabels) if ds.clabels is not None else (ds.ids, ds.ids)
+    y = lab_q[tq][qi_] == lab_g[tg][gi_]; samecat = ds.cats[tq][qi_] == ds.cats[tg][gi_]
+    def pair_scores(sl):
+        q, g = qi_[sl], gi_[sl]
+        return {"hsv_bhattacharyya": (ft_q["hsv"][q] * ft_g["hsv"][g]).sum(1), "lab_bhattacharyya": (ft_q["lab"][q] * ft_g["lab"][g]).sum(1),
+                "neg_dE00_foreground_median": -C.delta_e00(ft_q["evalLab"][q], ft_g["evalLab"][g]).ravel(),
+                "semantic_cosine": (ft_q["sem"][q] * ft_g["sem"][g]).sum(1)}
+    parts = [pair_scores(slice(i, min(i + 20000, npairs))) for i in range(0, npairs, 20000)]   # chunked: low memory
+    scores = {k: np.concatenate([p_[k] for p_ in parts]) for k in parts[0]}
+    ag = []
+    for scope, mk in (("all_pairs", np.ones_like(y, bool)), ("same_category_pairs", samecat)):
+        for nme, sc_ in scores.items():
+            if 0 < y[mk].sum() < mk.sum(): ag.append({"scope": scope, "score": nme, "auc": roc_auc_score(y[mk], sc_[mk]), "positive_rate": float(y[mk].mean()), "n_pairs": int(mk.sum())})
+    pd.DataFrame(ag).to_csv(f"{a.out}/metric_agreement.csv", index=False)
 
     # tau sensitivity (pixel-colour threshold): the 90th-percentile default can be very permissive
     sens = []
@@ -114,11 +144,13 @@ def main():
     pd.DataFrame(sens).to_csv(f"{a.out}/tau_sensitivity.csv", index=False)
 
     # paired bootstrap: adaptive minus best fixed
-    an = [k for k in per_q if k.startswith("adaptive")][0]; fn_ = [k for k in per_q if k.startswith("fixed_best(")][0]
+    an = [k for k in per_q if k.startswith("adaptive(")][0]; fn_ = [k for k in per_q if k.startswith("fixed_best(")][0]
     paired = {k: M.boot_ci(per_q[an][k] - per_q[fn_][k], seed=seed) for k in [k for k in ["AP", "R@1", "Sem@10", "Col@10", "Joint@10", "ColLab@10", "JointLab@10"] if k in per_q[an]]}
+    anJ = [k for k in per_q if k.startswith("adaptiveJ(")][0]; fnJ = [k for k in per_q if k.startswith("fixed_bestJ(")][0]
+    pairedJ = {k: M.boot_ci(per_q[anJ][k] - per_q[fnJ][k], seed=seed) for k in paired}
     f5 = "fixed_lambda0.5"
     paired5 = {k: M.boot_ci(per_q[an][k] - per_q[f5][k], seed=seed) for k in paired}
-    json.dump({"adaptive_minus_best_fixed (mean, lo95, hi95)": paired, "adaptive_minus_fixed_lambda0.5 (mean, lo95, hi95)": paired5, "tau_dE00": tau, "lam_star": lam_star,
+    json.dump({"adaptive_minus_best_fixed (mean, lo95, hi95)": paired, "adaptive_minus_fixed_lambda0.5 (mean, lo95, hi95)": paired5, "adaptiveJ_minus_best_fixedJ (mean, lo95, hi95)": pairedJ, "selection_metrics": sels, "lamJ": lamJ, "adaptiveJ": list(aJ), "tau_dE00": tau, "lam_star": lam_star,
                "adaptive_star": list(a_star), "n_test_queries": int(len(tq)), "n_test_gallery": int(len(tg)),
                "n_val_queries": int(len(vq)), "n_val_gallery": int(len(vg)), "colour_descriptor": cdesc,
                "encoder": enc.name, "dataset": ds.name, "seed": seed}, open(f"{a.out}/summary.json", "w"), indent=2)
@@ -127,7 +159,7 @@ def main():
     sweep = []
     for l in np.linspace(0, 1, 11):
         r = make_eval(ft_q, ft_g, tq, tg, {"type": "fixed", "lam": float(l)})
-        sweep.append({"lam": l, "mAP": r["AP"].mean(), "Sem@10": r["Sem@10"].mean(), "Col@10": r["Col@10"].mean(), "Joint@10": r["Joint@10"].mean()})
+        sweep.append({"lam": l, "mAP": r["AP"].mean(), "Sem@10": r["Sem@10"].mean(), "Col@10": r["Col@10"].mean(), "Joint@10": r["Joint@10"].mean(), **{k: r[k].mean() for k in ("ColLab@10", "JointLab@10") if k in r}})
     pd.DataFrame(sweep).to_csv(f"{a.out}/tradeoff_sweep.csv", index=False)
 
     # ---- robustness (queries transformed, gallery fixed) ---------------
