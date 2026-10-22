@@ -2,8 +2,9 @@
 import os, numpy as np, cv2
 
 class Dataset:
-    def __init__(self, ids, cats, role, loader, name):
+    def __init__(self, ids, cats, role, loader, name, clabels=None):
         self.ids, self.cats, self.role, self._load, self.name = np.asarray(ids), np.asarray(cats), np.asarray(role), loader, name
+        self.clabels = None if clabels is None else np.asarray(clabels)  # human colour labels (independent of pixels)
     def load(self, i): return self._load(i)
     def idx(self, role): return np.where(self.role == role)[0]
 
@@ -54,3 +55,26 @@ def synthetic(seed=0, n_shapes=6, n_colours=14, views_q=2, views_g=5, size=96):
         _shape(img, s, (size // 2 + int(r.integers(-8, 9)), size // 2 + int(r.integers(-8, 9))), int(r.integers(22, 33)), tuple(int(t) for t in col))
         return np.clip(img.astype(float) + r.normal(0, 4, img.shape), 0, 255).astype(np.uint8)
     return Dataset(ids, cats, role, loader, "synthetic_smoketest")
+
+
+# ---------- Fashion Product Images (small) : light-weight primary dataset ----------
+def fashion_product(root, seed=42, min_per_class=30, val_frac=0.2, query_frac=0.1, **_):
+    """root/styles.csv (columns: id, articleType, baseColour) and root/images/<id>.jpg
+    (Kaggle layout, or produced by scripts/prepare_fashion_small.py).
+    Relevance ('identity' here) = same articleType AND same human baseColour label.
+    Semantic category = articleType. Human colour label = baseColour (independent colour ground truth).
+    Images are split at random into val / test; within each, `query_frac` are queries and the rest gallery
+    (queries are never in their own gallery)."""
+    import pandas as pd
+    df = pd.read_csv(os.path.join(root, "styles.csv"), on_bad_lines="skip")[["id", "articleType", "baseColour"]].dropna()
+    df = df[[os.path.exists(os.path.join(root, "images", f"{i}.jpg")) for i in df["id"]]].reset_index(drop=True)
+    key = df["articleType"] + "|" + df["baseColour"]
+    df = df[key.map(key.value_counts()) >= min_per_class].reset_index(drop=True)
+    key = df["articleType"] + "|" + df["baseColour"]
+    rng = np.random.default_rng(seed); n = len(df); perm = rng.permutation(n)
+    part = np.empty(n, object); part[perm[: int(n * val_frac)]] = "val"; part[perm[int(n * val_frac):]] = "test"
+    isq = rng.random(n) < query_frac
+    role = [f"{p}_{'query' if q else 'gallery'}" for p, q in zip(part, isq)]
+    def loader(i):
+        im = cv2.imread(os.path.join(root, "images", f"{df['id'][i]}.jpg")); return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+    return Dataset(pd.factorize(key)[0], df["articleType"].values, role, loader, "fashion_small", clabels=df["baseColour"].values)

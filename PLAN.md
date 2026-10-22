@@ -11,6 +11,14 @@ Status legend: ✅ done & tested · 🟡 code ready, needs GPU/data access · �
 | External validation (Stanford Online Products) | 🟡 loader TODO after the primary run is stable |
 | Literature review, novelty gate, published colour-aware re-rank baseline | ⛔ must be done by a human with publisher access; no claims of novelty are made here |
 
+## 0b. Dataset pivot (DeepFashion too large to download)
+Primary dataset for the POC is now **Fashion Product Images (small)** (HF `ashraq/fashion-product-images-small` or Kaggle `paramaggarwal/fashion-product-images-small`), subsampled to ~15k images.
+* Semantic category = `articleType`. Human colour label = `baseColour`. **Relevance (replaces instance identity) = same articleType AND same baseColour.**
+* Colour consistency is now reported two ways: pixel-based CIEDE2000 (`Col@K`) **and** human-label-based (`ColLab@K`, `JointLab@K`) — the latter removes the pixel-circularity concern.
+* Caveats to state in the paper: class-level, not exact-product, relevance; images are low resolution (~60x80); `baseColour` labels are coarse/noisy (e.g. Navy Blue vs Blue); random image-level val/test split (no instance identities exist to split by).
+* HF column names are unverified from this sandbox: `scripts/prepare_fashion_small.py` prints the real columns and fails loudly if they differ. DeepFashion loader remains for later.
+* The loader was tested on a mock folder with the same layout (`styles.csv` + `images/`), not on the real data.
+
 ## 1. Single proposed mechanism (chosen from the plan's alternatives)
 **Training-free dispersion-reliability rule.** Scores of each modality are globally z-normalised
 (statistics fitted on validation pairs only). For query q, take its top-N semantic neighbours;

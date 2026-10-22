@@ -20,6 +20,9 @@ def feats(ds, idx, enc, kinds, cache, tag, transform=None, rng=None):
     if transform is None: np.savez_compressed(p, **out)
     return out
 
+def keys(r):
+    return [k for k in ["AP", "R@1", "R@10", "P@10", "Sem@10", "Col@10", "Joint@10", "ColLab@10", "JointLab@10", "Col@1", "Joint@1"] if k in r]
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", default="synthetic"); ap.add_argument("--root")
@@ -31,8 +34,9 @@ def main():
     rng = np.random.default_rng(seed)
 
     # ---- data & splits -------------------------------------------------
-    if a.dataset == "synthetic":
-        ds = D.synthetic(seed); tq, tg = ds.idx("test_query"), ds.idx("test_gallery"); vq, vg = ds.idx("val_query"), ds.idx("val_gallery")
+    if a.dataset in ("synthetic", "fashion_small"):
+        ds = D.synthetic(seed) if a.dataset == "synthetic" else D.fashion_product(a.root, seed, **cfg.get("fashion_small", {}))
+        tq, tg = ds.idx("test_query"), ds.idx("test_gallery"); vq, vg = ds.idx("val_query"), ds.idx("val_gallery")
     else:
         ds = D.deepfashion_inshop(a.root); tq, tg = ds.idx("query"), ds.idx("gallery")
         tr = ds.idx("train"); u = np.unique(ds.ids[tr]); rng.shuffle(u); vids = set(u[: int(len(u) * cfg["val_identity_frac"])].tolist())
@@ -62,7 +66,8 @@ def main():
         fn = {"sem": lambda sl: zs[sl], "col": lambda sl: zc[sl],
               "fixed": lambda sl: U.fixed(zs[sl], zc[sl], method["lam"]),
               "adaptive": lambda sl: U.adaptive(zs[sl], zc[sl], method["lam0"], method["gamma"], method["pool"])[0]}[method["type"]]
-        return M.evaluate(fn, len(qi), ds.ids[qi], ds.ids[gi], ds.cats[qi], ds.cats[gi], fq["evalLab"], fg["evalLab"], tau)
+        return M.evaluate(fn, len(qi), ds.ids[qi], ds.ids[gi], ds.cats[qi], ds.cats[gi], fq["evalLab"], fg["evalLab"], tau,
+                          q_cl=None if ds.clabels is None else ds.clabels[qi], g_cl=None if ds.clabels is None else ds.clabels[gi])
 
     # ---- hyper-parameter selection on VALIDATION only -----------------
     sel = cfg["selection_metric"]; score = lambda r: float(r[sel].mean())
@@ -86,7 +91,7 @@ def main():
     for n, m in methods.items():
         r = make_eval(ft_q, ft_g, tq, tg, m); per_q[n] = r
         row = {"method": n}
-        for k in ["AP", "R@1", "R@10", "P@10", "Sem@10", "Col@10", "Joint@10", "Col@1", "Joint@1"]:
+        for k in keys(r):
             mu, lo, hi = M.boot_ci(r[k], seed=seed); row[k if k != "AP" else "mAP"] = f"{mu:.4f} [{lo:.4f},{hi:.4f}]"
         rows.append(row)
     # alternative colour descriptor ablation
@@ -94,14 +99,14 @@ def main():
     for n, m in {f"fixed_best_with_{other}": {"type": "fixed", "lam": lam_star}}.items():
         r = make_eval(ft_q, ft_g, tq, tg, m, other); per_q[n] = r
         row = {"method": n}
-        for k in ["AP", "R@1", "R@10", "P@10", "Sem@10", "Col@10", "Joint@10", "Col@1", "Joint@1"]:
+        for k in keys(r):
             mu, lo, hi = M.boot_ci(r[k], seed=seed); row[k if k != "AP" else "mAP"] = f"{mu:.4f} [{lo:.4f},{hi:.4f}]"
         rows.append(row)
     main_df = pd.DataFrame(rows); main_df.to_csv(f"{a.out}/metrics_main.csv", index=False)
 
     # paired bootstrap: adaptive minus best fixed
     an = [k for k in per_q if k.startswith("adaptive")][0]; fn_ = [k for k in per_q if k.startswith("fixed_best(")][0]
-    paired = {k: M.boot_ci(per_q[an][k] - per_q[fn_][k], seed=seed) for k in ["AP", "R@1", "Sem@10", "Col@10", "Joint@10"]}
+    paired = {k: M.boot_ci(per_q[an][k] - per_q[fn_][k], seed=seed) for k in [k for k in ["AP", "R@1", "Sem@10", "Col@10", "Joint@10", "ColLab@10", "JointLab@10"] if k in per_q[an]]}
     json.dump({"adaptive_minus_best_fixed (mean, lo95, hi95)": paired, "tau_dE00": tau, "lam_star": lam_star,
                "adaptive_star": list(a_star), "n_test_queries": int(len(tq)), "n_test_gallery": int(len(tg)),
                "n_val_queries": int(len(vq)), "n_val_gallery": int(len(vg)), "colour_descriptor": cdesc,
@@ -124,7 +129,7 @@ def main():
             for n, m in methods.items():
                 if n.startswith("fixed_lambda"): continue
                 r = make_eval(fq, ft_g, tq, tg, m)
-                rob.append({"transform": kind, "level": lv, "method": n, "mAP": r["AP"].mean(), "R@1": r["R@1"].mean(), "Sem@10": r["Sem@10"].mean(), "Col@10": r["Col@10"].mean(), "Joint@10": r["Joint@10"].mean()})
+                rob.append({"transform": kind, "level": lv, "method": n, "mAP": r["AP"].mean(), "R@1": r["R@1"].mean(), "Sem@10": r["Sem@10"].mean(), "Col@10": r["Col@10"].mean(), "Joint@10": r["Joint@10"].mean(), **{k: r[k].mean() for k in ("ColLab@10", "JointLab@10") if k in r}})
     pd.DataFrame(rob).to_csv(f"{a.out}/robustness.csv", index=False)
 
     # ---- latency / storage ----------------------------------------------
