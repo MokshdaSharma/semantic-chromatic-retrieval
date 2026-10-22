@@ -61,12 +61,12 @@ def main():
     de = np.array([C.delta_e00(fv_q["evalLab"][i][None], fv_g["evalLab"][np.where(same[i])[0]]).ravel() for i in range(len(vq)) if same[i].any()], dtype=object)
     de = np.concatenate(list(de)); tau = float(np.percentile(de, cfg["tau_percentile"]))
 
-    def make_eval(fq, fg, qi, gi, method, kind=cdesc):
+    def make_eval(fq, fg, qi, gi, method, kind=cdesc, tau_=None):
         S_s, S_c = sims(fq, fg, kind); zs, zc = norm.sem(S_s), norm.chr(S_c)
         fn = {"sem": lambda sl: zs[sl], "col": lambda sl: zc[sl],
               "fixed": lambda sl: U.fixed(zs[sl], zc[sl], method["lam"]),
               "adaptive": lambda sl: U.adaptive(zs[sl], zc[sl], method["lam0"], method["gamma"], method["pool"])[0]}[method["type"]]
-        return M.evaluate(fn, len(qi), ds.ids[qi], ds.ids[gi], ds.cats[qi], ds.cats[gi], fq["evalLab"], fg["evalLab"], tau,
+        return M.evaluate(fn, len(qi), ds.ids[qi], ds.ids[gi], ds.cats[qi], ds.cats[gi], fq["evalLab"], fg["evalLab"], (tau if tau_ is None else tau_),
                           q_cl=None if ds.clabels is None else ds.clabels[qi], g_cl=None if ds.clabels is None else ds.clabels[gi])
 
     # ---- hyper-parameter selection on VALIDATION only -----------------
@@ -104,10 +104,21 @@ def main():
         rows.append(row)
     main_df = pd.DataFrame(rows); main_df.to_csv(f"{a.out}/metrics_main.csv", index=False)
 
+    # tau sensitivity (pixel-colour threshold): the 90th-percentile default can be very permissive
+    sens = []
+    for pct in (25, 50, 75, 90):
+        t_ = float(np.percentile(de, pct))
+        for n, m in methods.items():
+            r = make_eval(ft_q, ft_g, tq, tg, m, tau_=t_)
+            sens.append({"tau_pct": pct, "tau_dE00": t_, "method": n, "Col@10": r["Col@10"].mean(), "Joint@10": r["Joint@10"].mean()})
+    pd.DataFrame(sens).to_csv(f"{a.out}/tau_sensitivity.csv", index=False)
+
     # paired bootstrap: adaptive minus best fixed
     an = [k for k in per_q if k.startswith("adaptive")][0]; fn_ = [k for k in per_q if k.startswith("fixed_best(")][0]
     paired = {k: M.boot_ci(per_q[an][k] - per_q[fn_][k], seed=seed) for k in [k for k in ["AP", "R@1", "Sem@10", "Col@10", "Joint@10", "ColLab@10", "JointLab@10"] if k in per_q[an]]}
-    json.dump({"adaptive_minus_best_fixed (mean, lo95, hi95)": paired, "tau_dE00": tau, "lam_star": lam_star,
+    f5 = "fixed_lambda0.5"
+    paired5 = {k: M.boot_ci(per_q[an][k] - per_q[f5][k], seed=seed) for k in paired}
+    json.dump({"adaptive_minus_best_fixed (mean, lo95, hi95)": paired, "adaptive_minus_fixed_lambda0.5 (mean, lo95, hi95)": paired5, "tau_dE00": tau, "lam_star": lam_star,
                "adaptive_star": list(a_star), "n_test_queries": int(len(tq)), "n_test_gallery": int(len(tg)),
                "n_val_queries": int(len(vq)), "n_val_gallery": int(len(vg)), "colour_descriptor": cdesc,
                "encoder": enc.name, "dataset": ds.name, "seed": seed}, open(f"{a.out}/summary.json", "w"), indent=2)

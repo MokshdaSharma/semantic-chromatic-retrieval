@@ -27,7 +27,8 @@ class HFEncoder:
             for s in range(0, len(imgs), self.bs):
                 x = self.proc(images=list(imgs[s:s + self.bs]), return_tensors="pt")["pixel_values"].to(self.device)
                 if self.device == "cuda": x = x.half()
-                if self.kind == "clip": f = self.m.get_image_features(pixel_values=x)
+                if self.kind == "clip":  # version-independent: transformers>=5 returns an output object from get_image_features
+                    f = self.m.visual_projection(self.m.vision_model(pixel_values=x).pooler_output)
                 else: f = self.m(pixel_values=x).last_hidden_state[:, 0]  # CLS token
                 out.append(torch.nn.functional.normalize(f.float(), dim=-1).cpu().numpy())
         return np.concatenate(out)
