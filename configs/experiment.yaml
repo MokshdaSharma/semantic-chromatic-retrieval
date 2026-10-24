@@ -11,3 +11,13 @@ fashion_small:                  # Fashion Product Images (small) loader settings
   min_per_class: 30             # keep (articleType, baseColour) classes with >= this many images
   val_frac: 0.2
   query_frac: 0.1
+fashion_xdomain:                # tune on SOURCE domain, test on TARGET domain (needs masterCategory in styles.csv)
+  source_master: [Apparel]
+  target_master: [Footwear]     # override on the CLI: --target_master Accessories
+  val_frac_source: 0.25
+  query_frac: 0.1
+  min_per_class: 30
+generic_labeled:                # any second dataset prepared with scripts/prepare_hf_labeled.py
+  min_per_class: 30
+  val_frac: 0.2
+  query_frac: 0.1

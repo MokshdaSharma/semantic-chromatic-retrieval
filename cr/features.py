@@ -19,8 +19,18 @@ class HFEncoder:
         self.kind = kind; model = model or ("openai/clip-vit-base-patch32" if kind == "clip" else "facebook/dinov2-base")
         self.name = model.replace("/", "_")
         self.proc = AutoImageProcessor.from_pretrained(model)
+        if kind == "clip":
+            from transformers import AutoTokenizer; self.tok = AutoTokenizer.from_pretrained(model)
         self.m = (CLIPModel if kind == "clip" else AutoModel).from_pretrained(model).to(self.device).eval()
         if self.device == "cuda": self.m.half()
+        if kind == "clip": self.logit_scale = float(self.m.logit_scale.exp())
+        else: self.encode_text = None  # DINOv2 has no text tower: baseline skipped
+    def encode_text(self, prompts):
+        torch = self.torch
+        with torch.no_grad():
+            t = self.tok(list(prompts), padding=True, return_tensors="pt").to(self.device)
+            f = self.m.text_projection(self.m.text_model(**t).pooler_output)  # version-independent
+            return torch.nn.functional.normalize(f.float(), dim=-1).cpu().numpy()
     def encode(self, imgs):
         torch, out = self.torch, []
         with torch.no_grad():
@@ -32,3 +42,11 @@ class HFEncoder:
                 else: f = self.m(pixel_values=x).last_hidden_state[:, 0]  # CLS token
                 out.append(torch.nn.functional.normalize(f.float(), dim=-1).cpu().numpy())
         return np.concatenate(out)
+
+
+class FakeCLIP(HOGStandIn):
+    """TEST ONLY: exercises the text-prompt code path without CLIP (embeddings are meaningless)."""
+    name = "fakeclip_test_only"; logit_scale = 100.0
+    def encode_text(self, prompts):
+        r = np.random.default_rng(0); d = self.h.getDescriptorSize(); t = r.normal(size=(len(prompts), d)).astype(np.float32)
+        return t / np.linalg.norm(t, axis=1, keepdims=True)

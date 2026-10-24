@@ -30,3 +30,9 @@ def adaptive(zs, zc, lam0=0.5, gamma=1.0, pool=50):
     ws, wc = lam0 * ss ** gamma, (1 - lam0) * sc ** gamma
     a = ws / (ws + wc)
     return a[:, None] * zs + (1 - a)[:, None] * zc, a
+
+
+def pool_stats(zs, zc, pool=50):
+    """Per-query std of each modality inside the query's top-`pool` semantic neighbours (as used by adaptive())."""
+    n = zs.shape[1]; pool = min(pool, n); idx = np.argpartition(-zs, pool - 1, axis=1)[:, :pool]
+    return np.take_along_axis(zs, idx, 1).std(1) + 1e-6, np.take_along_axis(zc, idx, 1).std(1) + 1e-6

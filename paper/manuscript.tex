@@ -17,7 +17,13 @@ We ask: (RQ1) how much do semantic and chromatic cues complement each other when
 \textbf{Contributions.} (i) A controlled comparison of fixed and query-adaptive fusion under matched tuning budgets with paired confidence intervals over five splits and two encoders; (ii) evidence on the validity of pixel-based colour metrics against human labels; (iii) breakdowns by colour, robustness and cost; (iv) open code and a disclosed protocol log. We make no claim of a new method.
 
 \section{Related Work}
-\todo{Classical colour/texture descriptors; deep retrieval; hybrid fusion; adaptive/query-dependent weighting; colour-aware re-ranking; robustness evaluation. Fill from the verified literature table (paper/LITERATURE\_TABLE.md) and state whether dispersion-based query-adaptive fusion already exists.}
+\subsection{Colour descriptors and perceptual colour similarity}\todo{from LITERATURE\_REQUEST heading 1}
+\subsection{Deep and fashion/product retrieval with pretrained encoders}\todo{heading 2}
+\subsection{Hybrid fusion of deep and handcrafted features}\todo{heading 3}
+\subsection{Adaptive, query-dependent and score-distribution fusion}\todo{heading 4; state whether dispersion-based weighting already exists}
+\subsection{Colour-aware retrieval and re-ranking}\todo{heading 5}
+\subsection{Colour in vision--language models}\todo{heading 6}
+\subsection{Evaluation methodology and robustness}\todo{headings 8--9}
 
 \section{Problem Formulation}
 Let $q$ be a query and $x$ a gallery image. $S_{sem}(q,x)$ is cosine similarity of frozen embeddings; $S_{chr}(q,x)$ is the Bhattacharyya coefficient between square-rooted histograms (HSV $16{\times}4{\times}4$ primary; Lab $4{\times}8{\times}8$ ablation) over a central elliptical region. Both are globally $z$-normalised using validation-pair statistics only.
@@ -54,6 +60,9 @@ Fusion helps chromatic queries more than achromatic ones in both encoders (colou
 \input{tables/table_robustness_worst.tex}
 Under query-side perturbations (Table~\ref{tab:robust}), colour-only retrieval is fragile to photometric changes (retaining 0.20--0.34 of clean P@10) but tolerates blur well (0.71 retained for both encoders' runs; for CLIP it is the most blur-tolerant method, for DINOv2 on par with the fused ranker at 0.72). The fused ranker mostly tracks the semantic encoder for CLIP, but for DINOv2 it retains less of its clean performance than DINOv2 alone under brightness, contrast, saturation and occlusion (e.g.\ 0.70 vs.\ 0.92 under brightness), because it inherits the colour histogram's photometric sensitivity; in absolute worst-case P@10 it still matches or exceeds semantic-only in 11 of 12 encoder--transform pairs, the exception being CLIP under hue shift (0.296 vs.\ 0.304), where the query's colour has intentionally changed. CLIP semantic retrieval is itself fragile to blur and occlusion (0.17 and 0.19 retained). Hue shift changes the intended colour and is not a nuisance; the drop is expected. Robustness values are means over splits without per-condition CIs.
 
+\subsection{Stronger baselines: learned fusion and CLIP colour-text prompts}\todo{After stage 3: table of learned\_fixed, learned\_qcond, CLIP colour-text only and fused vs.\ validation-tuned fixed fusion (H6, H7), with paired CIs; learned coefficients from learned\_fusion\_coefficients.json.}
+\subsection{Cross-domain validation}\todo{After stage 3: Apparel$\to$Footwear and Apparel$\to$Accessories (H8); state clearly that this is a transfer test within one source collection, plus the second dataset if used.}
+\subsection{Qualitative examples and failure analysis}\todo{After stage 3: example grids (random / wins / losses chosen by stated rule), failure taxonomy, colour-label confusion pairs, per-category changes.}
 \subsection{Cost (RQ5)}
 \input{tables/table_latency.tex}
 Adaptive scoring costs about 0.12 ms per query on CPU against 0.03 ms for fixed fusion (brute force over about 16k gallery images; encoder inference excluded), and the colour histogram adds 1 KB per gallery image to a 2--3 KB embedding.

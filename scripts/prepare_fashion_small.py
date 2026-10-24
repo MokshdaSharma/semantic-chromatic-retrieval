@@ -19,5 +19,5 @@ for k, ex in enumerate(ds):
     at, bc = ex.get("articleType"), ex.get("baseColour")
     if at is None or bc is None: continue
     i = ex.get("id", k); ex["image"].convert("RGB").save(f"{a.out}/images/{i}.jpg", quality=92)
-    rows.append({"id": i, "articleType": at, "baseColour": bc})
+    rows.append({"id": i, "articleType": at, "baseColour": bc, "masterCategory": ex.get("masterCategory"), "productDisplayName": ex.get("productDisplayName")})
 pd.DataFrame(rows).to_csv(f"{a.out}/styles.csv", index=False); print("saved", len(rows), "images to", a.out)

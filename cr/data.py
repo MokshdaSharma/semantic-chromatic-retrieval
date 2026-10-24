@@ -58,23 +58,33 @@ def synthetic(seed=0, n_shapes=6, n_colours=14, views_q=2, views_g=5, size=96):
 
 
 # ---------- Fashion Product Images (small) : light-weight primary dataset ----------
-def fashion_product(root, seed=42, min_per_class=30, val_frac=0.2, query_frac=0.1, **_):
-    """root/styles.csv (columns: id, articleType, baseColour) and root/images/<id>.jpg
-    (Kaggle layout, or produced by scripts/prepare_fashion_small.py).
-    Relevance ('identity' here) = same articleType AND same human baseColour label.
-    Semantic category = articleType. Human colour label = baseColour (independent colour ground truth).
-    Images are split at random into val / test; within each, `query_frac` are queries and the rest gallery
-    (queries are never in their own gallery)."""
+def fashion_product(root, seed=42, min_per_class=30, val_frac=0.2, query_frac=0.1, name="fashion_small",
+                    source_master=None, target_master=None, val_frac_source=0.25, **_):
+    """root/styles.csv (id, articleType, baseColour [, masterCategory]) and root/images/<id>.jpg.
+    Relevance ('identity') = same articleType AND same human baseColour label; category = articleType;
+    human colour label = baseColour (independent of pixels).
+    Default: random image-level val/test split, `query_frac` of each part are queries.
+    CROSS-DOMAIN mode (source_master/target_master given, needs masterCategory): validation pool = random `val_frac_source` of the
+    SOURCE-domain images (used for ALL tuning/normalisation), test pool = ALL images of the TARGET domain(s). Nothing from the target
+    domain is used for tuning."""
     import pandas as pd
-    df = pd.read_csv(os.path.join(root, "styles.csv"), on_bad_lines="skip")[["id", "articleType", "baseColour"]].dropna()
+    df = pd.read_csv(os.path.join(root, "styles.csv"), on_bad_lines="skip")
+    cols = ["id", "articleType", "baseColour"] + (["masterCategory"] if "masterCategory" in df.columns else [])
+    df = df[cols].dropna()
     df = df[[os.path.exists(os.path.join(root, "images", f"{i}.jpg")) for i in df["id"]]].reset_index(drop=True)
     key = df["articleType"] + "|" + df["baseColour"]
     df = df[key.map(key.value_counts()) >= min_per_class].reset_index(drop=True)
     key = df["articleType"] + "|" + df["baseColour"]
-    rng = np.random.default_rng(seed); n = len(df); perm = rng.permutation(n)
-    part = np.empty(n, object); part[perm[: int(n * val_frac)]] = "val"; part[perm[int(n * val_frac):]] = "test"
+    rng = np.random.default_rng(seed); n = len(df); part = np.empty(n, object)
+    if source_master or target_master:
+        assert "masterCategory" in df.columns, "cross-domain mode needs a masterCategory column (re-run scripts/prepare_fashion_small.py)"
+        src, tgt = df["masterCategory"].isin(source_master).values, df["masterCategory"].isin(target_master).values
+        assert not (set(source_master) & set(target_master)), "source and target domains must be disjoint"
+        part[:] = "unused"; part[src & (rng.random(n) < val_frac_source)] = "val"; part[tgt] = "test"
+    else:
+        perm = rng.permutation(n); part[perm[: int(n * val_frac)]] = "val"; part[perm[int(n * val_frac):]] = "test"
     isq = rng.random(n) < query_frac
     role = [f"{p}_{'query' if q else 'gallery'}" for p, q in zip(part, isq)]
     def loader(i):
         im = cv2.imread(os.path.join(root, "images", f"{df['id'][i]}.jpg")); return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
-    return Dataset(pd.factorize(key)[0], df["articleType"].values, role, loader, "fashion_small", clabels=df["baseColour"].values)
+    return Dataset(pd.factorize(key)[0], df["articleType"].values, role, loader, name, clabels=df["baseColour"].values)

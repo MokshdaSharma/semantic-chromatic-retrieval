@@ -4,7 +4,7 @@
 """
 import argparse, json, os, sys, time, itertools, numpy as np, pandas as pd, yaml
 from tqdm import tqdm
-from . import data as D, features as F, colour as C, fusion as U, metrics as M, robustness as R
+from . import data as D, features as F, colour as C, fusion as U, metrics as M, robustness as R, extras as X
 
 def feats(ds, idx, enc, kinds, cache, tag, transform=None, rng=None):
     """Cached extraction. Returns dict: sem, hsv, lab, evalLab."""
@@ -29,13 +29,21 @@ def main():
     ap.add_argument("--encoder", default="hog"); ap.add_argument("--hf_model")
     ap.add_argument("--out", required=True); ap.add_argument("--config", default="configs/experiment.yaml")
     ap.add_argument("--max_test_queries", type=int, default=None); ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument("--no_robustness", action="store_true"); ap.add_argument("--no_extras", action="store_true"); ap.add_argument("--qualitative", action="store_true")
+    ap.add_argument("--name", default=None); ap.add_argument("--source_master", default=None); ap.add_argument("--target_master", default=None)
     a = ap.parse_args(); cfg = yaml.safe_load(open(a.config)); seed = a.seed if a.seed is not None else cfg["seed"]
     os.makedirs(a.out, exist_ok=True); cache = os.path.join(a.out, "cache"); os.makedirs(cache, exist_ok=True)
     rng = np.random.default_rng(seed)
 
     # ---- data & splits -------------------------------------------------
-    if a.dataset in ("synthetic", "fashion_small"):
-        ds = D.synthetic(seed) if a.dataset == "synthetic" else D.fashion_product(a.root, seed, **cfg.get("fashion_small", {}))
+    if a.dataset in ("synthetic", "fashion_small", "fashion_xdomain", "generic_labeled"):
+        if a.dataset == "synthetic": ds = D.synthetic(seed)
+        elif a.dataset == "fashion_small": ds = D.fashion_product(a.root, seed, **cfg.get("fashion_small", {}))
+        elif a.dataset == "fashion_xdomain":
+            kw = dict(cfg["fashion_xdomain"]); kw["source_master"] = a.source_master.split(",") if a.source_master else kw["source_master"]
+            kw["target_master"] = a.target_master.split(",") if a.target_master else kw["target_master"]
+            ds = D.fashion_product(a.root, seed, name="xdomain_" + "+".join(kw["source_master"]) + "_to_" + "+".join(kw["target_master"]), **kw)
+        else: ds = D.fashion_product(a.root, seed, **{**cfg.get("generic_labeled", {}), "name": a.name or os.path.basename(a.root.rstrip("/"))})
         tq, tg = ds.idx("test_query"), ds.idx("test_gallery"); vq, vg = ds.idx("val_query"), ds.idx("val_gallery")
     else:
         ds = D.deepfashion_inshop(a.root); tq, tg = ds.idx("query"), ds.idx("gallery")
@@ -45,15 +53,21 @@ def main():
         _, first = np.unique(ds.ids[vsel], return_index=True); isq = np.zeros(len(vsel), bool); isq[first] = True
         vq, vg = vsel[isq], vsel[~isq]
     if a.max_test_queries and len(tq) > a.max_test_queries: tq = rng.choice(tq, a.max_test_queries, replace=False)
-    enc = F.HOGStandIn() if a.encoder == "hog" else F.HFEncoder(a.encoder, a.hf_model)
+    enc = F.HOGStandIn() if a.encoder == "hog" else F.FakeCLIP() if a.encoder == "fakeclip" else F.HFEncoder(a.encoder, a.hf_model)
     kinds = ["hsv", "lab"]; tagp = f"{ds.name}_{enc.name}_s{seed}"
     fv_q = feats(ds, vq, enc, kinds, cache, tagp + "_vq"); fv_g = feats(ds, vg, enc, kinds, cache, tagp + "_vg")
     ft_q = feats(ds, tq, enc, kinds, cache, tagp + "_tq"); ft_g = feats(ds, tg, enc, kinds, cache, tagp + "_tg")
 
     cdesc = cfg["colour_descriptor"]
+    has_text = (not a.no_extras) and getattr(enc, "encode_text", None) is not None
+    if has_text:   # CLIP colour-text prompts: fixed generic vocabulary, no dataset labels used
+        T = enc.encode_text([X.PROMPT.format(c) for c in X.COLOUR_VOCAB])
+        for f_ in (fv_q, fv_g, ft_q, ft_g): f_["txtcol"] = X.clip_colour_probs(f_["sem"], T, enc.logit_scale)
     def sims(fq, fg, kind): return fq["sem"] @ fg["sem"].T, fq[kind] @ fg[kind].T
-    # ---- normalisation fitted on validation pairs only ----------------
-    sv_s, sv_c = sims(fv_q, fv_g, cdesc); norm = U.Norm(sv_s, sv_c)
+    # ---- normalisation fitted on validation pairs only, ONE per colour descriptor ----
+    # (v2 z-scored the Lab ablation with HSV statistics; now each descriptor has its own validation statistics)
+    sv_s = fv_q["sem"] @ fv_g["sem"].T
+    norms = {k_: U.Norm(sv_s, fv_q[k_] @ fv_g[k_].T) for k_ in ("hsv", "lab", "txtcol") if k_ in fv_q}; norm = norms[cdesc]
 
     # ---- evaluator-side colour threshold tau (from val, same-identity pairs) ----
     vqid, vgid = ds.ids[vq], ds.ids[vg]
@@ -61,11 +75,19 @@ def main():
     de = np.array([C.delta_e00(fv_q["evalLab"][i][None], fv_g["evalLab"][np.where(same[i])[0]]).ravel() for i in range(len(vq)) if same[i].any()], dtype=object)
     de = np.concatenate(list(de)); tau = float(np.percentile(de, cfg["tau_percentile"]))
 
+    learned = {}
+    def score_fn(fq, fg, method, kind):
+        S_s, S_c = sims(fq, fg, kind); nm = norms[kind]; zs, zc = nm.sem(S_s), nm.chr(S_c); t = method["type"]
+        if t == "sem": return lambda sl: zs[sl]
+        if t == "col": return lambda sl: zc[sl]
+        if t == "fixed": return lambda sl: U.fixed(zs[sl], zc[sl], method["lam"])
+        if t == "adaptive": return lambda sl: U.adaptive(zs[sl], zc[sl], method["lam0"], method["gamma"], method["pool"])[0]
+        if t in ("learned_fixed", "learned_qcond"):
+            return lambda sl: learned[t].score(zs[sl], zc[sl], X.query_ctx(zs[sl], zc[sl], fq["evalLab"][sl]))
+        raise ValueError(t)
+
     def make_eval(fq, fg, qi, gi, method, kind=cdesc, tau_=None):
-        S_s, S_c = sims(fq, fg, kind); zs, zc = norm.sem(S_s), norm.chr(S_c)
-        fn = {"sem": lambda sl: zs[sl], "col": lambda sl: zc[sl],
-              "fixed": lambda sl: U.fixed(zs[sl], zc[sl], method["lam"]),
-              "adaptive": lambda sl: U.adaptive(zs[sl], zc[sl], method["lam0"], method["gamma"], method["pool"])[0]}[method["type"]]
+        kind = method.get("kind", kind); fn = score_fn(fq, fg, method, kind)
         return M.evaluate(fn, len(qi), ds.ids[qi], ds.ids[gi], ds.cats[qi], ds.cats[gi], fq["evalLab"], fg["evalLab"], (tau if tau_ is None else tau_),
                           q_cl=None if ds.clabels is None else ds.clabels[qi], g_cl=None if ds.clabels is None else ds.clabels[gi])
 
@@ -84,6 +106,20 @@ def main():
     pd.DataFrame([{"lam": l, **g} for l, g in grid_f.items()]).to_csv(f"{a.out}/val_fixed_grid.csv", index=False)
     pd.DataFrame([{"lam0": k[0], "gamma": k[1], "pool": k[2], **g} for k, g in grid_a.items()]).to_csv(f"{a.out}/val_adaptive_grid.csv", index=False)
 
+    # ---- extra baselines (trained / tuned on VALIDATION only) ----
+    extra_methods = {}
+    if not a.no_extras:
+        zs_v, zc_v = norm.sem(sv_s), norm.chr(fv_q[cdesc] @ fv_g[cdesc].T); rel_v = ds.ids[vq][:, None] == ds.ids[vg][None]
+        ctx_v = X.query_ctx(zs_v, zc_v, fv_q["evalLab"]); coefs = {}
+        for t_, qc in (("learned_fixed", False), ("learned_qcond", True)):
+            learned[t_] = X.LearnedFusion(qc, seed=seed).fit(zs_v, zc_v, ctx_v, rel_v); coefs[t_] = learned[t_].describe(); extra_methods[t_] = {"type": t_}
+        json.dump(coefs, open(f"{a.out}/learned_fusion_coefficients.json", "w"), indent=1)
+        if has_text:
+            grid_t = {l: v({"type": "fixed", "lam": l, "kind": "txtcol"}) for l in cfg["lambda_grid"]}; lam_t = best(grid_t, sels[0])
+            extra_methods["cliptext_colour_only"] = {"type": "col", "kind": "txtcol"}
+            extra_methods[f"fixed_best_cliptext(lam={lam_t})"] = {"type": "fixed", "lam": lam_t, "kind": "txtcol"}
+            pd.DataFrame([{"lam": l, **g_} for l, g_ in grid_t.items()]).to_csv(f"{a.out}/val_cliptext_grid.csv", index=False)
+
     # ---- TEST ----------------------------------------------------------
     methods = {
         f"colour_only_{cdesc}": {"type": "col"}, "semantic_only": {"type": "sem"},
@@ -92,6 +128,7 @@ def main():
         f"adaptive(lam0={a_star[0]},g={a_star[1]},N={a_star[2]})": {"type": "adaptive", "lam0": a_star[0], "gamma": a_star[1], "pool": a_star[2]},
         f"fixed_bestJ(lam={lamJ})": {"type": "fixed", "lam": lamJ},
         f"adaptiveJ(lam0={aJ[0]},g={aJ[1]},N={aJ[2]})": {"type": "adaptive", "lam0": aJ[0], "gamma": aJ[1], "pool": aJ[2]},
+        **extra_methods,
     }
     per_q, rows = {}, []
     for n, m in methods.items():
@@ -148,12 +185,23 @@ def main():
     paired = {k: M.boot_ci(per_q[an][k] - per_q[fn_][k], seed=seed) for k in [k for k in ["AP", "R@1", "Sem@10", "Col@10", "Joint@10", "ColLab@10", "JointLab@10"] if k in per_q[an]]}
     anJ = [k for k in per_q if k.startswith("adaptiveJ(")][0]; fnJ = [k for k in per_q if k.startswith("fixed_bestJ(")][0]
     pairedJ = {k: M.boot_ci(per_q[anJ][k] - per_q[fnJ][k], seed=seed) for k in paired}
+    paired_extra = {}
+    for nm_, key_ in (("learned_fixed", "learned_fixed"), ("learned_qcond", "learned_qcond"), ("fixed_best_cliptext(", "fixed_cliptext")):
+        hit = [k for k in per_q if k.startswith(nm_)]
+        if hit: paired_extra[f"{key_}_minus_best_fixed (mean, lo95, hi95)"] = {k: M.boot_ci(per_q[hit[0]][k] - per_q[fn_][k], seed=seed) for k in paired}
     f5 = "fixed_lambda0.5"
     paired5 = {k: M.boot_ci(per_q[an][k] - per_q[f5][k], seed=seed) for k in paired}
-    json.dump({"adaptive_minus_best_fixed (mean, lo95, hi95)": paired, "adaptive_minus_fixed_lambda0.5 (mean, lo95, hi95)": paired5, "adaptiveJ_minus_best_fixedJ (mean, lo95, hi95)": pairedJ, "selection_metrics": sels, "lamJ": lamJ, "adaptiveJ": list(aJ), "tau_dE00": tau, "lam_star": lam_star,
+    json.dump({"adaptive_minus_best_fixed (mean, lo95, hi95)": paired, "adaptive_minus_fixed_lambda0.5 (mean, lo95, hi95)": paired5, "adaptiveJ_minus_best_fixedJ (mean, lo95, hi95)": pairedJ, "selection_metrics": sels, **paired_extra, "lamJ": lamJ, "adaptiveJ": list(aJ), "tau_dE00": tau, "lam_star": lam_star,
                "adaptive_star": list(a_star), "n_test_queries": int(len(tq)), "n_test_gallery": int(len(tg)),
                "n_val_queries": int(len(vq)), "n_val_gallery": int(len(vg)), "colour_descriptor": cdesc,
                "encoder": enc.name, "dataset": ds.name, "seed": seed}, open(f"{a.out}/summary.json", "w"), indent=2)
+
+    if a.qualitative:
+        base_, ref_ = "semantic_only", fn_; col_ = f"colour_only_{cdesc}"
+        show = [base_, col_, ref_] + [k for k in per_q if k.startswith("learned_qcond") or k.startswith("fixed_best_cliptext(")]
+        fns_ = {n_: score_fn(ft_q, ft_g, methods[n_], methods[n_].get("kind", cdesc)) for n_ in show}
+        X.failure_analysis(ds, tq, tg, fns_, per_q, ref_, base_, f"{a.out}/analysis")
+        X.qualitative(ds, tq, tg, {n_: fns_[n_] for n_ in show[:3]}, per_q, ref_, base_, f"{a.out}/qualitative", seed=seed)
 
     # ---- lambda sweep for trade-off figure (test, reported not tuned) -----
     sweep = []
@@ -164,16 +212,16 @@ def main():
 
     # ---- robustness (queries transformed, gallery fixed) ---------------
     rob = []
-    for kind, levels in R.LEVELS.items():
+    for kind, levels in ([] if a.no_robustness else R.LEVELS.items()):
         for lv in levels:
             rr = np.random.default_rng(seed)
             tf = lambda im, kind=kind, lv=lv: R.apply(im, kind, lv, rr)
             fq = feats(ds, tq, enc, kinds, cache, "rob", transform=tf)
             for n, m in methods.items():
-                if n.startswith("fixed_lambda"): continue
+                if n.startswith("fixed_lambda") or m["type"] not in ("sem", "col", "fixed", "adaptive") or "kind" in m: continue
                 r = make_eval(fq, ft_g, tq, tg, m)
                 rob.append({"transform": kind, "level": lv, "method": n, "mAP": r["AP"].mean(), "R@1": r["R@1"].mean(), "Sem@10": r["Sem@10"].mean(), "Col@10": r["Col@10"].mean(), "Joint@10": r["Joint@10"].mean(), **{k: r[k].mean() for k in ("ColLab@10", "JointLab@10") if k in r}})
-    pd.DataFrame(rob).to_csv(f"{a.out}/robustness.csv", index=False)
+    if rob: pd.DataFrame(rob).to_csv(f"{a.out}/robustness.csv", index=False)
 
     # ---- latency / storage ----------------------------------------------
     S_s, S_c = sims(ft_q, ft_g, cdesc); zs, zc = norm.sem(S_s), norm.chr(S_c); nq = min(200, len(tq))

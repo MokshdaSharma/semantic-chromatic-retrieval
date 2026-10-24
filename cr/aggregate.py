@@ -6,16 +6,20 @@ import argparse, json, os, collections
 import numpy as np, pandas as pd, matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 
 MAIN = ["mAP", "R@1", "P@10", "Sem@10", "ColLab@10", "JointLab@10", "Col@10", "Joint@10"]
-ORDER = ["colour_only", "semantic_only", "fixed_0.5", "fixed_best_mAP", "adaptive_mAP", "fixed_best_Joint", "adaptive_Joint", "fixed_best_alt_colour"]
+ORDER = ["colour_only", "semantic_only", "fixed_0.5", "fixed_best_mAP", "adaptive_mAP", "fixed_best_Joint", "adaptive_Joint", "fixed_best_alt_colour", "learned_fixed", "learned_qcond", "cliptext_colour_only", "fixed_best_cliptext"]
 NAMES = {"colour_only": "Colour only (HSV)", "semantic_only": "Semantic only", "fixed_0.5": "Fixed, $\\lambda$=0.5",
          "fixed_best_mAP": "Fixed, val-best (mAP)", "adaptive_mAP": "Adaptive, val-best (mAP)",
          "fixed_best_Joint": "Fixed, val-best (Joint)", "adaptive_Joint": "Adaptive, val-best (Joint)",
-         "fixed_best_alt_colour": "Fixed, val-best (mAP), Lab hist."}
+         "fixed_best_alt_colour": "Fixed, val-best (mAP), Lab hist.",
+         "learned_fixed": "Learned fusion (logistic, fixed form)", "learned_qcond": "Learned fusion (logistic, query-conditioned)",
+         "cliptext_colour_only": "CLIP colour-text prompts only", "fixed_best_cliptext": "Fixed, val-best, CLIP colour-text"}
 ACHROMATIC = {"Black", "White", "Grey", "Silver", "Off White", "Charcoal", "Grey Melange", "Cream"}  # grouping fixed before per-colour analysis
 
 def mclass(n):
     if n.startswith("colour_only"): return "colour_only"
     if n == "semantic_only": return "semantic_only"
+    if n in ("learned_fixed", "learned_qcond", "cliptext_colour_only"): return n
+    if n.startswith("fixed_best_cliptext("): return "fixed_best_cliptext"
     if n == "fixed_lambda0.5": return "fixed_0.5"
     if n.startswith("fixed_best_with_"): return "fixed_best_alt_colour"
     if n.startswith("fixed_bestJ("): return "fixed_best_Joint"
@@ -41,6 +45,7 @@ def main():
     runs = []
     for d in a.runs:
         if os.path.exists(f"{d}/summary.json"): s = json.load(open(f"{d}/summary.json")); runs.append({"dir": d, "enc": s["encoder"], "seed": s["seed"], "s": s})
+    assert len({r["s"]["dataset"] for r in runs}) == 1, "aggregate ONE dataset at a time (run once per dataset)"
     by = collections.defaultdict(list)
     for r in runs: by[r["enc"]].append(r)
     meta = {e: {"n_runs": len(v), "seeds": sorted(x["seed"] for x in v), "dataset": v[0]["s"]["dataset"], "n_test_queries": [x["s"]["n_test_queries"] for x in v],
@@ -64,7 +69,7 @@ def main():
     # ---- paired adaptive vs fixed (mean diff over seeds, share of seeds whose CI excludes 0)
     prow = []
     for e, rs in by.items():
-        for key in [k for k in rs[0]["s"] if k.startswith("adaptive") and "_minus_" in k]:
+        for key in [k for k in rs[0]["s"] if "_minus_" in k]:
             acc = collections.defaultdict(list)
             for r in rs:
                 for m, (mu, lo, hi) in r["s"].get(key, {}).items(): acc[m].append((mu, lo > 0 or hi < 0))

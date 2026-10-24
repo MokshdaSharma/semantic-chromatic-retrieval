@@ -89,3 +89,28 @@ Primary: mAP and P@10 (≡ Joint_label@10). Secondary: R@1, Sem@10, ColLab@10, p
 Hypotheses H1–H4 supported, H5 mixed. Decision: **publishable as an empirical study only if** (a) the literature check confirms the adaptive rule is an existing/standard idea evaluated here as a reference (not claimed as new), and (b) external validation or a second dataset is added to avoid a single-dataset conclusion.
 Protocol-log addendum: figure colouring changed (cosmetic); `cr/paper_tables.py` added; manuscript numbers were verified against generated tables by script before commit.
 Still open: literature table + citations; colour-aware re-ranking baseline; second dataset; per-condition CIs for robustness; instance-level (DeepFashion) relevance as a harder test; authors/licences.
+
+---
+# Stage 3 (final experimental stage): baselines, external validation, qualitative/failure analysis
+Run with `notebooks/run_colab_v3_stage3.ipynb`. Everything below is declared BEFORE any stage-3 run.
+
+## Added components
+* **Learned fusion baselines** (`cr/extras.py`): logistic pairwise model on z-normalised similarities, trained on VALIDATION pairs only (top-50 semantic + top-50 colour + 50 random candidates per val query; C=1 fixed in advance).
+  `learned_fixed` = terms [z_sem, z_chr, z_sem·z_chr] (learned, query-independent weights); `learned_qcond` adds interactions with the query's pool dispersions σ_s, σ_c and query chroma (learned, query-conditioned weights). Coefficients are saved (`learned_fusion_coefficients.json`).
+* **CLIP colour-text prompts** (CLIP only): zero-shot colour distribution from a FIXED 18-colour generic vocabulary (`"a photo of a {c} product"`, chosen without looking at dataset labels) used (i) alone and (ii) as the colour channel of fixed fusion with λ tuned on validation. DINOv2 has no text tower → skipped.
+* **Cross-domain validation** on the same source: tune/normalise on Apparel, test on Footwear and on Accessories separately (`fashion_xdomain`). Nothing from the target domain is used for tuning. This tests whether the tuned weights and conclusions transfer across product domains; it is NOT an independent dataset.
+* **Independent second dataset** (optional, user-chosen): `scripts/prepare_hf_labeled.py` + `--dataset generic_labeled`. Colour signal = a colour label column or a single basic-colour word in a caption (ambiguous captions skipped). I verified no specific repo.
+* **Qualitative + failure analysis** (seed 0): grids of random queries, biggest wins/losses of fused vs semantic-only (green = relevant); failure taxonomy of top-10 slots (wrong colour/right category, wrong category/right colour, both wrong); colour-label confusion pairs; per-category P@10 change.
+
+## Hypotheses (new)
+* **H6** The learned query-conditioned fusion is practically equivalent to the validation-tuned fixed weight (|Δ| < 0.01 on mAP and P@10). Falsified if it exceeds that margin with CIs excluding the margin in most seeds — which would change the paper's narrative from "adaptivity adds nothing" to "adaptivity needs supervision".
+* **H7** (exploratory, no directional prediction) CLIP colour-text prompts as the colour channel vs HSV: compare human-label colour match and fused P@10.
+* **H8** The H1 and H2 conclusions (fusion > semantic-only on P@10; adaptive ≈ tuned fixed within ±0.01) hold under the Apparel→Footwear and Apparel→Accessories transfer.
+
+## Decision rules
+Same as v2: primary metrics mAP and P@10(≡Joint_label@10); per-seed paired CIs; report seeds whose CI excludes 0 / lies inside the margin; no multiplicity correction. Cross-domain uses 3 seeds (stated limitation). Qualitative examples are illustrative; they are chosen by a stated rule (random / extremes), never cherry-picked by eye.
+
+## Protocol log addendum (changes vs v2)
+1. Per-descriptor normalisation: v2 z-scored the Lab-histogram ablation using HSV validation statistics; v3 fits one `Norm` per descriptor. HSV-based methods are unaffected; the Lab ablation row will change and **supersedes** the v2 value. `scripts/check_v2_v3_consistency.py` verifies the unchanged methods reproduce v2.
+2. v3 main-dataset runs use `--no_robustness`; robustness tables remain those of v2 (extras are not included in robustness).
+3. Tau-sensitivity table now defaults to the CLIP runs deterministically (caption wording changed).

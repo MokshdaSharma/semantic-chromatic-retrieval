@@ -27,3 +27,7 @@ python -m cr.aggregate --runs results/v2/fs_clip_s* results/v2/fs_dinov2_s* --ou
 cp results/v2_tables/*.tex paper/tables/
 ```
 See `PLAN.md` (hypotheses, protocol log) and `paper/manuscript.tex` (draft; numbers only via generated tables).
+
+## Stage 3 (baselines, cross-domain, qualitative/failure analysis)
+`notebooks/run_colab_v3_stage3.ipynb`. New flags: `--no_robustness --no_extras --qualitative --source_master --target_master`; datasets `fashion_xdomain`, `generic_labeled`.
+Literature requests: `paper/LITERATURE_REQUEST.md`.
