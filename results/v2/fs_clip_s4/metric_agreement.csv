@@ -1,0 +1,9 @@
+scope,score,auc,positive_rate,n_pairs
+all_pairs,hsv_bhattacharyya,0.6215778541263858,0.13537,300000
+all_pairs,lab_bhattacharyya,0.6572413193119856,0.13537,300000
+all_pairs,neg_dE00_foreground_median,0.7389384065021951,0.13537,300000
+all_pairs,semantic_cosine,0.5695350251257416,0.13537,300000
+same_category_pairs,hsv_bhattacharyya,0.6840732296964898,0.15443533280606087,24023
+same_category_pairs,lab_bhattacharyya,0.7119944831049068,0.15443533280606087,24023
+same_category_pairs,neg_dE00_foreground_median,0.7662595873236144,0.15443533280606087,24023
+same_category_pairs,semantic_cosine,0.6144216462496697,0.15443533280606087,24023

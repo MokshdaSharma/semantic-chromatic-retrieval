@@ -1,0 +1,49 @@
+encoder,transform,method,worst_level,retained,abs_P10
+CLIP ViT-B/32,blur,"Adaptive, val-best (mAP)",2.0,0.31,0.154
+CLIP ViT-B/32,blur,Colour only (HSV),2.0,0.71,0.183
+CLIP ViT-B/32,blur,"Fixed, val-best (mAP)",2.0,0.31,0.154
+CLIP ViT-B/32,blur,Semantic only,2.0,0.17,0.075
+CLIP ViT-B/32,brightness,"Adaptive, val-best (mAP)",1.5,0.65,0.325
+CLIP ViT-B/32,brightness,Colour only (HSV),0.6,0.21,0.053
+CLIP ViT-B/32,brightness,"Fixed, val-best (mAP)",1.5,0.65,0.325
+CLIP ViT-B/32,brightness,Semantic only,1.5,0.64,0.283
+CLIP ViT-B/32,contrast,"Adaptive, val-best (mAP)",0.5,0.65,0.326
+CLIP ViT-B/32,contrast,Colour only (HSV),0.5,0.24,0.063
+CLIP ViT-B/32,contrast,"Fixed, val-best (mAP)",0.5,0.66,0.327
+CLIP ViT-B/32,contrast,Semantic only,0.5,0.72,0.316
+CLIP ViT-B/32,hue_shift,"Adaptive, val-best (mAP)",60.0,0.59,0.296
+CLIP ViT-B/32,hue_shift,Colour only (HSV),60.0,0.2,0.051
+CLIP ViT-B/32,hue_shift,"Fixed, val-best (mAP)",60.0,0.59,0.296
+CLIP ViT-B/32,hue_shift,Semantic only,60.0,0.69,0.304
+CLIP ViT-B/32,occlusion,"Adaptive, val-best (mAP)",0.4,0.21,0.105
+CLIP ViT-B/32,occlusion,Colour only (HSV),0.4,0.11,0.028
+CLIP ViT-B/32,occlusion,"Fixed, val-best (mAP)",0.4,0.21,0.105
+CLIP ViT-B/32,occlusion,Semantic only,0.4,0.19,0.083
+CLIP ViT-B/32,saturation,"Adaptive, val-best (mAP)",0.4,0.81,0.401
+CLIP ViT-B/32,saturation,Colour only (HSV),0.4,0.34,0.087
+CLIP ViT-B/32,saturation,"Fixed, val-best (mAP)",0.4,0.81,0.402
+CLIP ViT-B/32,saturation,Semantic only,0.4,0.86,0.381
+DINOv2-B,blur,"Adaptive, val-best (mAP)",2.0,0.72,0.357
+DINOv2-B,blur,Colour only (HSV),2.0,0.71,0.183
+DINOv2-B,blur,"Fixed, val-best (mAP)",2.0,0.72,0.357
+DINOv2-B,blur,Semantic only,2.0,0.66,0.221
+DINOv2-B,brightness,"Adaptive, val-best (mAP)",0.6,0.7,0.346
+DINOv2-B,brightness,Colour only (HSV),0.6,0.21,0.053
+DINOv2-B,brightness,"Fixed, val-best (mAP)",0.6,0.7,0.344
+DINOv2-B,brightness,Semantic only,1.5,0.92,0.308
+DINOv2-B,contrast,"Adaptive, val-best (mAP)",0.5,0.72,0.355
+DINOv2-B,contrast,Colour only (HSV),0.5,0.24,0.063
+DINOv2-B,contrast,"Fixed, val-best (mAP)",0.5,0.72,0.357
+DINOv2-B,contrast,Semantic only,0.5,0.97,0.326
+DINOv2-B,hue_shift,"Adaptive, val-best (mAP)",60.0,0.64,0.314
+DINOv2-B,hue_shift,Colour only (HSV),60.0,0.2,0.051
+DINOv2-B,hue_shift,"Fixed, val-best (mAP)",60.0,0.64,0.315
+DINOv2-B,hue_shift,Semantic only,60.0,0.95,0.32
+DINOv2-B,occlusion,"Adaptive, val-best (mAP)",0.4,0.42,0.21
+DINOv2-B,occlusion,Colour only (HSV),0.4,0.11,0.028
+DINOv2-B,occlusion,"Fixed, val-best (mAP)",0.4,0.43,0.214
+DINOv2-B,occlusion,Semantic only,0.4,0.57,0.193
+DINOv2-B,saturation,"Adaptive, val-best (mAP)",0.4,0.8,0.397
+DINOv2-B,saturation,Colour only (HSV),0.4,0.34,0.087
+DINOv2-B,saturation,"Fixed, val-best (mAP)",0.4,0.81,0.399
+DINOv2-B,saturation,Semantic only,0.4,0.95,0.319

@@ -1,0 +1,17 @@
+enc,scope,score,auc
+facebook_dinov2-base,all_pairs,hsv_bhattacharyya,0.623$\pm$0.003
+facebook_dinov2-base,all_pairs,lab_bhattacharyya,0.657$\pm$0.004
+facebook_dinov2-base,all_pairs,neg_dE00_foreground_median,0.738$\pm$0.004
+facebook_dinov2-base,all_pairs,semantic_cosine,0.537$\pm$0.003
+facebook_dinov2-base,same_category_pairs,hsv_bhattacharyya,0.685$\pm$0.006
+facebook_dinov2-base,same_category_pairs,lab_bhattacharyya,0.714$\pm$0.005
+facebook_dinov2-base,same_category_pairs,neg_dE00_foreground_median,0.766$\pm$0.002
+facebook_dinov2-base,same_category_pairs,semantic_cosine,0.595$\pm$0.006
+openai_clip-vit-base-patch32,all_pairs,hsv_bhattacharyya,0.623$\pm$0.003
+openai_clip-vit-base-patch32,all_pairs,lab_bhattacharyya,0.657$\pm$0.004
+openai_clip-vit-base-patch32,all_pairs,neg_dE00_foreground_median,0.738$\pm$0.004
+openai_clip-vit-base-patch32,all_pairs,semantic_cosine,0.572$\pm$0.002
+openai_clip-vit-base-patch32,same_category_pairs,hsv_bhattacharyya,0.685$\pm$0.006
+openai_clip-vit-base-patch32,same_category_pairs,lab_bhattacharyya,0.714$\pm$0.005
+openai_clip-vit-base-patch32,same_category_pairs,neg_dE00_foreground_median,0.766$\pm$0.002
+openai_clip-vit-base-patch32,same_category_pairs,semantic_cosine,0.625$\pm$0.008

@@ -1,0 +1,52 @@
+{
+ "openai_clip-vit-base-patch32": {
+  "n_runs": 5,
+  "seeds": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "dataset": "fashion_small",
+  "n_test_queries": [
+   1792,
+   1774,
+   1781,
+   1765,
+   1768
+  ],
+  "n_test_gallery": [
+   15972,
+   15990,
+   15983,
+   15999,
+   15996
+  ]
+ },
+ "facebook_dinov2-base": {
+  "n_runs": 5,
+  "seeds": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "dataset": "fashion_small",
+  "n_test_queries": [
+   1792,
+   1774,
+   1781,
+   1765,
+   1768
+  ],
+  "n_test_gallery": [
+   15972,
+   15990,
+   15983,
+   15999,
+   15996
+  ]
+ }
+}

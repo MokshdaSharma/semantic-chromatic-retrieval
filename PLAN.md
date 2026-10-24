@@ -83,3 +83,9 @@ Primary: mAP and P@10 (≡ Joint_label@10). Secondary: R@1, Sem@10, ColLab@10, p
 * External validation dataset (e.g. Stanford Online Products — colour labels absent there, so only semantic/cost claims transfer) — optional.
 * Fill manuscript placeholders from v2 tables; qualitative figure from `per_query.csv`; failure analysis.
 * Dataset licence check; confirm DINOv2/CLIP licences before redistributing anything.
+
+
+## v2 outcome (completed on Colab; see RESULTS_SUMMARY.md)
+Hypotheses H1–H4 supported, H5 mixed. Decision: **publishable as an empirical study only if** (a) the literature check confirms the adaptive rule is an existing/standard idea evaluated here as a reference (not claimed as new), and (b) external validation or a second dataset is added to avoid a single-dataset conclusion.
+Protocol-log addendum: figure colouring changed (cosmetic); `cr/paper_tables.py` added; manuscript numbers were verified against generated tables by script before commit.
+Still open: literature table + citations; colour-aware re-ranking baseline; second dataset; per-condition CIs for robustness; instance-level (DeepFashion) relevance as a harder test; authors/licences.

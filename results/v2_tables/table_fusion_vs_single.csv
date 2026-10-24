@@ -1,0 +1,21 @@
+encoder,comparison,metric,mean_diff,seeds_CI_excl_0
+CLIP ViT-B/32,Fixed(val-best) $-$ Semantic only,mAP,+0.027,5/5
+CLIP ViT-B/32,Fixed(val-best) $-$ Semantic only,R@1,+0.058,5/5
+CLIP ViT-B/32,Fixed(val-best) $-$ Semantic only,P@10,+0.057,5/5
+CLIP ViT-B/32,Fixed(val-best) $-$ Semantic only,Sem@10,-0.019,5/5
+CLIP ViT-B/32,Fixed(val-best) $-$ Semantic only,ColLab@10,+0.080,5/5
+CLIP ViT-B/32,Fixed(val-best) $-$ Colour only,mAP,+0.192,5/5
+CLIP ViT-B/32,Fixed(val-best) $-$ Colour only,R@1,+0.227,5/5
+CLIP ViT-B/32,Fixed(val-best) $-$ Colour only,P@10,+0.242,5/5
+CLIP ViT-B/32,Fixed(val-best) $-$ Colour only,Sem@10,+0.427,5/5
+CLIP ViT-B/32,Fixed(val-best) $-$ Colour only,ColLab@10,+0.016,4/5
+DINOv2-B,Fixed(val-best) $-$ Semantic only,mAP,+0.059,5/5
+DINOv2-B,Fixed(val-best) $-$ Semantic only,R@1,+0.180,5/5
+DINOv2-B,Fixed(val-best) $-$ Semantic only,P@10,+0.156,5/5
+DINOv2-B,Fixed(val-best) $-$ Semantic only,Sem@10,-0.027,5/5
+DINOv2-B,Fixed(val-best) $-$ Semantic only,ColLab@10,+0.198,5/5
+DINOv2-B,Fixed(val-best) $-$ Colour only,mAP,+0.190,5/5
+DINOv2-B,Fixed(val-best) $-$ Colour only,R@1,+0.231,5/5
+DINOv2-B,Fixed(val-best) $-$ Colour only,P@10,+0.237,5/5
+DINOv2-B,Fixed(val-best) $-$ Colour only,Sem@10,+0.440,5/5
+DINOv2-B,Fixed(val-best) $-$ Colour only,ColLab@10,+0.005,1/5

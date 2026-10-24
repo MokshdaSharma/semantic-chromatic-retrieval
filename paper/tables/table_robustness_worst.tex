@@ -1,0 +1,18 @@
+\begin{table}[t]\centering\small
+\caption{Worst-case share of clean P@10 retained over four severity levels (query-side transforms; hue shift is an intentional colour change, not a nuisance).}\label{tab:robust}
+\resizebox{\linewidth}{!}{\begin{tabular}{llrrrr}\toprule
+encoder & transform & Adaptive, val-best (mAP) & Colour only (HSV) & Fixed, val-best (mAP) & Semantic only \\ \midrule
+CLIP ViT-B/32 & blur & 0.31 & 0.71 & 0.31 & 0.17 \\
+CLIP ViT-B/32 & brightness & 0.65 & 0.21 & 0.65 & 0.64 \\
+CLIP ViT-B/32 & contrast & 0.65 & 0.24 & 0.66 & 0.72 \\
+CLIP ViT-B/32 & hue\_shift & 0.59 & 0.2 & 0.59 & 0.69 \\
+CLIP ViT-B/32 & occlusion & 0.21 & 0.11 & 0.21 & 0.19 \\
+CLIP ViT-B/32 & saturation & 0.81 & 0.34 & 0.81 & 0.86 \\
+DINOv2-B & blur & 0.72 & 0.71 & 0.72 & 0.66 \\
+DINOv2-B & brightness & 0.7 & 0.21 & 0.7 & 0.92 \\
+DINOv2-B & contrast & 0.72 & 0.24 & 0.72 & 0.97 \\
+DINOv2-B & hue\_shift & 0.64 & 0.2 & 0.64 & 0.95 \\
+DINOv2-B & occlusion & 0.42 & 0.11 & 0.43 & 0.57 \\
+DINOv2-B & saturation & 0.8 & 0.34 & 0.81 & 0.95 \\
+\bottomrule\end{tabular}}
+\end{table}

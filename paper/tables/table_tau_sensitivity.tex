@@ -1,0 +1,13 @@
+\begin{table}[t]\centering\small
+\caption{Pixel-based colour consistency@10 versus threshold percentile (CLIP runs; $\tau$ = percentile of $\Delta E_{00}$ among same-class validation pairs).}\label{tab:tau}
+\resizebox{\linewidth}{!}{\begin{tabular}{llrrrr}\toprule
+encoder & method & tau@25th pct & tau@50th pct & tau@75th pct & tau@90th pct \\ \midrule
+CLIP ViT-B/32 & Adaptive, val-best (Joint) & 0.514 & 0.769 & 0.913 & 0.97 \\
+CLIP ViT-B/32 & Adaptive, val-best (mAP) & 0.495 & 0.751 & 0.901 & 0.965 \\
+CLIP ViT-B/32 & Colour only (HSV) & 0.648 & 0.866 & 0.958 & 0.987 \\
+CLIP ViT-B/32 & Fixed, $\lambda$=0.5 & 0.543 & 0.796 & 0.928 & 0.977 \\
+CLIP ViT-B/32 & Fixed, val-best (Joint) & 0.522 & 0.777 & 0.918 & 0.972 \\
+CLIP ViT-B/32 & Fixed, val-best (mAP) & 0.492 & 0.749 & 0.901 & 0.965 \\
+CLIP ViT-B/32 & Semantic only & 0.354 & 0.605 & 0.805 & 0.919 \\
+\bottomrule\end{tabular}}
+\end{table}

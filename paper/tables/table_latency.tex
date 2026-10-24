@@ -1,0 +1,8 @@
+\begin{table}[t]\centering\small
+\caption{CPU brute-force scoring latency (excludes encoder inference) and storage per gallery image (bytes, fp32).}\label{tab:latency}
+\resizebox{\linewidth}{!}{\begin{tabular}{llrrrrrr}\toprule
+encoder & sem\_scoring (ms/query) & colour\_scoring (ms/query) & fixed\_fusion (ms/query) & adaptive\_fusion (ms/query) & semantic\_fp32 & hsv\_fp32 & lab\_fp32 \\ \midrule
+DINOv2-B & 0.272 & 0.0853 & 0.0303 & 0.126 & 3072.0 & 1024.0 & 1024.0 \\
+CLIP ViT-B/32 & 0.1742 & 0.0912 & 0.0324 & 0.1215 & 2048.0 & 1024.0 & 1024.0 \\
+\bottomrule\end{tabular}}
+\end{table}

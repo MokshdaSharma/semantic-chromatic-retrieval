@@ -1,0 +1,12 @@
+{
+  "sem_scoring_ms_per_query": 0.26749138100012715,
+  "colour_scoring_ms_per_query": 0.08841171000040049,
+  "fixed_fusion_ms_per_query": 0.03047610500016162,
+  "adaptive_fusion_ms_per_query": 0.11863972500032105,
+  "storage_bytes_per_gallery_image": {
+    "semantic_fp32": 3072,
+    "hsv_fp32": 1024,
+    "lab_fp32": 1024
+  },
+  "note": "CPU, brute-force numpy; scoring only (excludes encoder inference)."
+}

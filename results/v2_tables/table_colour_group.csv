@@ -1,0 +1,7 @@
+,,AP,AP,AP,AP,ColLab@10,ColLab@10,ColLab@10,ColLab@10
+cls,,adaptive_mAP,fixed_0.5,fixed_best_mAP,semantic_only,adaptive_mAP,fixed_0.5,fixed_best_mAP,semantic_only
+enc,colour_group,,,,,,,,
+facebook_dinov2-base,achromatic,0.302,0.302,0.307,0.27,0.656,0.659,0.654,0.503
+facebook_dinov2-base,chromatic,0.251,0.254,0.251,0.169,0.534,0.546,0.532,0.284
+openai_clip-vit-base-patch32,achromatic,0.299,0.276,0.301,0.289,0.647,0.661,0.647,0.583
+openai_clip-vit-base-patch32,chromatic,0.262,0.255,0.262,0.219,0.562,0.584,0.561,0.465

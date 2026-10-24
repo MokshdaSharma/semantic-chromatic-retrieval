@@ -92,10 +92,11 @@ def main():
 
     # ---- trade-off curves
     fig, ax = plt.subplots(figsize=(5.5, 4.2)); ylab = set()
-    for e, rs in by.items():
+    pal = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+    for ci, (e, rs) in enumerate(by.items()):
         for i, r in enumerate(rs):
             t = pd.read_csv(f"{r['dir']}/tradeoff_sweep.csv"); y = "ColLab@10" if "ColLab@10" in t else "Col@10"; ylab.add(y)
-            ax.plot(t["Sem@10"], t[y], "o-", ms=3, alpha=.7, label=e if i == 0 else None)
+            ax.plot(t["Sem@10"], t[y], "o-", ms=2.5, lw=1, alpha=.55, color=pal[ci], label=f"{e} ({len(rs)} seeds)" if i == 0 else None)
     ax.set_xlabel("Semantic relevance@10 (category)"); ax.set_ylabel("Colour match@10 (human label)" if ylab == {"ColLab@10"} else "Colour consistency@10 (pixel dE00 <= tau)" if ylab == {"Col@10"} else "Colour metric@10 (mixed runs: check inputs)"); ax.legend(fontsize=7); ax.set_title("Fixed fusion: lambda 0 -> 1")
     plt.tight_layout(); plt.savefig(f"{a.out}/figures/fig4_tradeoff.png", dpi=200); plt.close()
 
